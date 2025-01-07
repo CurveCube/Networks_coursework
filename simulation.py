@@ -24,7 +24,7 @@ class App(ShowBase):
 
         # Загрузка модели GLTF
         try:
-            self.model = self.loader.loadModel("models/earth/earth.gltf")
+            self.model = self.loader.loadModel("models/earth/scene.gltf")
             self.model.reparentTo(self.render)
             print("Model loaded successfully")
         except Exception as e:
@@ -143,14 +143,14 @@ class App(ShowBase):
     def setup_lights(self):
         # Создание фонового света
         ambientLight = AmbientLight("ambientLight")
-        ambientLight.setColor((0.2, 0.2, 0.2, 1))
+        ambientLight.setColor((0.015, 0.015, 0.015, 1))
         ambientLightNode = self.render.attachNewNode(ambientLight)
         self.render.setLight(ambientLightNode)
 
         # Создание направленного света
         directionalLight = DirectionalLight("directionalLight")
         directionalLight.setDirection((LVector3(0, 1, 0)))
-        directionalLight.setColor((0.9, 0.9, 0.9, 1))
+        directionalLight.setColor((5, 5, 5, 1))
         directionalLightNode = self.render.attachNewNode(directionalLight)
         self.render.setLight(directionalLightNode)
 
