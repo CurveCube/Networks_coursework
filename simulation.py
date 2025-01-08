@@ -10,6 +10,10 @@ from panda3d.core import LineSegs, LPoint3, LVector3
 
 import simplepbr
 
+from satelite import Satellite
+import numpy as np
+import time
+
 p3d.load_prc_file_data(
     '',
     'window-size 1024 768\n'
@@ -83,8 +87,27 @@ class App(ShowBase):
         self.accept("wheel_down", self.zoom_out)
 
 
-        self.setup_sprite()
-        self.setup_orbit()
+        #self.setup_sprite(0, 0, 0)
+        #self.setup_orbit()
+        self.setup_satellite()
+
+    def setup_satellite(self):
+        self.satellites = [Satellite(a=150, e=0.1, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
+                           Satellite(a=150, e=0.1, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270))]
+        self.t0 = time.time()
+        for satellite in self.satellites:
+            x, y, z = satellite.position(self.t0, self.t0)
+            print(x, y, z)
+            satellite.sprite = self.setup_sprite(x, y, z)
+        self.taskMgr.add(self.update_satellite, "update_satellite")
+        
+    def update_satellite(self, task):
+        t = time.time()
+        delta_t = (self.t0 - t)
+        for satellite in self.satellites:
+            x, y, z = satellite.position(self.t0 + delta_t, self.t0)
+            satellite.sprite.set_pos(x, y, z)
+        return task.again
 
     def setup_orbit(self):
         # Создаем LineSegs для рисования орбиты
@@ -113,7 +136,7 @@ class App(ShowBase):
         # Устанавливаем позицию орбиты относительно сцены
         orbit.set_pos(0, 0, 0)  # Позиция орбиты в сцене
 
-    def setup_sprite(self):
+    def setup_sprite(self, x, y ,z):
         # Создаем CardMaker для создания спрайта
         cm = CardMaker("sprite")
         cm.set_frame(-1, 1, -1, 1)  # Размеры спрайта
@@ -133,11 +156,12 @@ class App(ShowBase):
         sprite.reparent_to(self.render)
 
         # Устанавливаем позицию спрайта относительно сцены
-        sprite.set_pos(10, 0, 0)  # Позиция спрайта в сцене
-        sprite.set_scale(0.5)  # Масштаб спрайта
+        sprite.set_pos(x, y, z)  # Позиция спрайта в сцене
+        sprite.set_scale(5)  # Масштаб спрайта
 
         # Применяем эффект билборда, чтобы спрайт всегда был повернут к камере
         sprite.set_billboard_point_eye()
+        return sprite
 
 
     def setup_lights(self):

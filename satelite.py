@@ -52,9 +52,11 @@ class Satellite:
 
 if __name__ == '__main__':
     # Пример использования
-    satellite = Satellite(a=7000, e=0.1, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90))
+    satellite = Satellite(a=20, e=0.1, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90))
     t0 = 0
     t = 3600  # Время в секундах
 
+    x, y, z = satellite.position(t0, t0)
+    print(f"Координаты спутника в момент времени t0: x={x}, y={y}, z={z}")
     x, y, z = satellite.position(t, t0)
     print(f"Координаты спутника в момент времени t={t} секунд: x={x}, y={y}, z={z}")
