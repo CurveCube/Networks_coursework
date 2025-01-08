@@ -48,6 +48,24 @@ class Satellite:
 
 
         return x_eq, y_eq, z_eq
+    
+    def orbit(self, n):
+        rad = np.linspace(0, 2 * np.pi, n + 1)
+        orbit = []
+        for M in rad:
+            E = self.eccentric_anomaly(M)
+            nu = self.true_anomaly(E)
+            r = self.radius(nu)
+
+            x_orb = r * np.cos(nu)
+            y_orb = r * np.sin(nu)
+
+            # Вычисление координат в экваториальной плоскости
+            x_eq = x_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)) - y_orb * (np.sin(self.omega) * np.cos(self.w) + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i))
+            y_eq = x_orb * (np.cos(self.omega) * np.sin(self.w) + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i)) + y_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i))
+            z_eq = x_orb * np.sin(self.i) * np.sin(self.w) + y_orb * np.sin(self.i) * np.cos(self.w)
+            orbit.append((x_eq, y_eq, z_eq))
+        return orbit
 
 
 if __name__ == '__main__':

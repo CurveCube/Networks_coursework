@@ -92,13 +92,14 @@ class App(ShowBase):
         self.setup_satellite()
 
     def setup_satellite(self):
-        self.satellites = [Satellite(a=150, e=0.1, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
-                           Satellite(a=150, e=0.1, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270))]
+        self.satellites = [Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
+                           Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270))]
         self.t0 = time.time()
         for satellite in self.satellites:
             x, y, z = satellite.position(self.t0, self.t0)
             print(x, y, z)
             satellite.sprite = self.setup_sprite(x, y, z)
+            satellite.orbit = self.setup_orbit(satellite)
         self.taskMgr.add(self.update_satellite, "update_satellite")
         
     def update_satellite(self, task):
@@ -109,22 +110,19 @@ class App(ShowBase):
             satellite.sprite.set_pos(x, y, z)
         return task.again
 
-    def setup_orbit(self):
+    def setup_orbit(self, satellite):
         # Создаем LineSegs для рисования орбиты
         ls = LineSegs()
-        ls.set_color(1, 1, 1, 1)  # Белый цвет
-        ls.set_thickness(2)  # Толщина линии
+        ls.set_color(1, 1, 1, 0.8)  # Белый цвет
+        ls.set_thickness(1.5)  # Толщина линии
 
         # Количество сегментов для круга
         num_segments = 1000
-        radius = 10  # Радиус орбиты
+        orbit_points = satellite.orbit(1000)
 
         # Рисуем круг
-        for i in range(num_segments + 1):
-            angle = 2 * 3.14159 * i / num_segments
-            x = radius * math.cos(angle)
-            y = radius * math.sin(angle)
-            ls.draw_to(LPoint3(x, y, 0))
+        for x, y, z in orbit_points:
+            ls.draw_to(LPoint3(x, y, z))
 
         # Создаем NodePath для орбиты
         orbit_node = ls.create()
@@ -132,9 +130,11 @@ class App(ShowBase):
 
         # Прикрепляем орбиту к сцене
         orbit.reparent_to(self.render)
+        orbit.setLightOff()
 
         # Устанавливаем позицию орбиты относительно сцены
         orbit.set_pos(0, 0, 0)  # Позиция орбиты в сцене
+        return orbit
 
     def setup_sprite(self, x, y ,z):
         # Создаем CardMaker для создания спрайта
@@ -161,8 +161,25 @@ class App(ShowBase):
 
         # Применяем эффект билборда, чтобы спрайт всегда был повернут к камере
         sprite.set_billboard_point_eye()
-        return sprite
 
+        # Настраиваем спрайт, чтобы он не изменял размер при приближении камеры
+        sprite.setScale(5)
+        sprite.setLightOff()
+
+        def updateSpriteScale(task):
+            # Получаем расстояние от камеры до спрайта
+            distance = sprite.getPos(self.camera).length()
+
+            # Устанавливаем масштаб спрайта в зависимости от расстояния
+            scale = 3 * (np.sqrt(distance) / 20)
+            sprite.setScale(scale)
+
+            return task.cont
+
+        # Настраиваем обновление масштаба спрайта
+        self.taskMgr.add(updateSpriteScale, "updateSpriteScale")
+
+        return sprite
 
     def setup_lights(self):
         # Создание фонового света
