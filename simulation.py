@@ -93,7 +93,8 @@ class App(ShowBase):
 
     def setup_satellite(self):
         self.satellites = [Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
-                           Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270))]
+                           Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270)),
+                           Satellite(a=100, e=0.1, i=np.radians(-57), omega=np.radians(50), w=np.radians(0), m=np.radians(0))]
         self.t0 = time.time()
         for satellite in self.satellites:
             x, y, z = satellite.position(self.t0, self.t0)
@@ -129,7 +130,7 @@ class App(ShowBase):
         orbit = NodePath(orbit_node)
 
         # Прикрепляем орбиту к сцене
-        orbit.reparent_to(self.render)
+        orbit.reparent_to(self.model)
         orbit.setLightOff()
 
         # Устанавливаем позицию орбиты относительно сцены
@@ -153,7 +154,7 @@ class App(ShowBase):
         sprite.set_transparency(TransparencyAttrib.M_alpha)
 
         # Прикрепляем спрайт к сцене
-        sprite.reparent_to(self.render)
+        sprite.reparent_to(self.model)
 
         # Устанавливаем позицию спрайта относительно сцены
         sprite.set_pos(x, y, z)  # Позиция спрайта в сцене
