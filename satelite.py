@@ -27,23 +27,30 @@ class Satellite:
         return E
 
     def true_anomaly(self, E):
-        return 2 * np.arctan(np.sqrt((1 + self.e) / (1 - self.e)) * np.tan(E / 2))
+        #return 2 * np.arctan(np.sqrt((1 + self.e) / (1 - self.e)) * np.tan(E / 2))
+        #return 2 * np.arctan2(np.sqrt(1 - self.e), np.sqrt(1 + self.e) * np.tan(E / 2))
+        #return 2 * np.arctan2(np.sqrt(1 + self.e) * np.sin(E /2), np.sqrt(1 - self.e) * np.cos(E / 2))
+        return 2 * np.arctan2(np.sqrt(1 - self.e) * np.cos(E /2), np.sqrt(1 + self.e) * np.sin(E / 2))
 
-    def radius(self, nu):
-        return self.a * (1 - self.e**2) / (1 + self.e * np.cos(nu))
+    #def radius(self, nu):
+    #    return self.a * (1 - self.e**2) / (1 + self.e * np.cos(nu))
+
+    def radius(self, E):
+        return self.a * (1 - self.e * np.cos(E))
 
     def position(self, t, t0):
         M = self.mean_anomaly(t, t0)
         E = self.eccentric_anomaly(M)
         nu = self.true_anomaly(E)
-        r = self.radius(nu)
+        #r = self.radius(nu)
+        r = self.radius(E)
 
         x_orb = r * np.cos(nu)
         y_orb = r * np.sin(nu)
 
-       # Вычисление координат в экваториальной плоскости
-        x_eq = x_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)) - y_orb * (np.sin(self.omega) * np.cos(self.w) + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i))
-        y_eq = x_orb * (np.cos(self.omega) * np.sin(self.w) + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i)) + y_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i))
+        # Вычисление координат в экваториальной плоскости
+        x_eq = x_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)) - y_orb * (np.cos(self.omega) * np.sin(self.w) + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i))
+        y_eq = x_orb * (np.sin(self.omega) * np.cos(self.w) + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i)) + y_orb * (-np.sin(self.omega) * np.sin(self.w) + np.cos(self.omega) * np.cos(self.w) * np.cos(self.i))
         z_eq = x_orb * np.sin(self.i) * np.sin(self.w) + y_orb * np.sin(self.i) * np.cos(self.w)
 
         return x_eq, y_eq, z_eq
@@ -54,14 +61,15 @@ class Satellite:
         for M in rad:
             E = self.eccentric_anomaly(M)
             nu = self.true_anomaly(E)
-            r = self.radius(nu)
+            # r = self.radius(nu)
+            r = self.radius(E)
 
             x_orb = r * np.cos(nu)
             y_orb = r * np.sin(nu)
 
             # Вычисление координат в экваториальной плоскости
-            x_eq = x_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)) - y_orb * (np.sin(self.omega) * np.cos(self.w) + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i))
-            y_eq = x_orb * (np.cos(self.omega) * np.sin(self.w) + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i)) + y_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i))
+            x_eq = x_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)) - y_orb * (np.cos(self.omega) * np.sin(self.w) + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i))
+            y_eq = x_orb * (np.sin(self.omega) * np.cos(self.w) + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i)) + y_orb * (-np.sin(self.omega) * np.sin(self.w) + np.cos(self.omega) * np.cos(self.w) * np.cos(self.i))
             z_eq = x_orb * np.sin(self.i) * np.sin(self.w) + y_orb * np.sin(self.i) * np.cos(self.w)
             orbit.append((x_eq, y_eq, z_eq))
         return orbit
