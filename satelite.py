@@ -8,7 +8,7 @@ class Satellite:
         self.omega = omega # Долгота восходящего узла
         self.w = w # Аргумент перицентра 
         self.m = m # Средняя аномалия
-        self.mu = mu  # Гравитационный параметр
+        self.mu = mu # Гравитационный параметр
 
     def mean_motion(self):
         return np.sqrt(self.mu / self.a**3)
@@ -45,7 +45,6 @@ class Satellite:
         x_eq = x_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)) - y_orb * (np.sin(self.omega) * np.cos(self.w) + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i))
         y_eq = x_orb * (np.cos(self.omega) * np.sin(self.w) + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i)) + y_orb * (np.cos(self.omega) * np.cos(self.w) - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i))
         z_eq = x_orb * np.sin(self.i) * np.sin(self.w) + y_orb * np.sin(self.i) * np.cos(self.w)
-
 
         return x_eq, y_eq, z_eq
     

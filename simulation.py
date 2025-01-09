@@ -4,7 +4,7 @@ import os
 import panda3d.core as p3d
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import Shader
-from panda3d.core import AmbientLight, DirectionalLight, PointLight, Spotlight
+from panda3d.core import AmbientLight, DirectionalLight
 from panda3d.core import CardMaker, NodePath, TransparencyAttrib, DepthTestAttrib, RenderAttrib, BillboardEffect
 from panda3d.core import LineSegs, LPoint3, LVector3
 
@@ -26,10 +26,20 @@ class App(ShowBase):
         super().__init__()
         self.pipeline = simplepbr.init()
 
+        self.central_node = self.render.attachNewNode("central_node")
+        self.central_node.setPos(0, 0, 0)
+        self.central_node.setR(23.5)
+        
         # Загрузка модели GLTF
         try:
+            radius = 6.371
             self.model = self.loader.loadModel("models/earth/scene.gltf")
-            self.model.reparentTo(self.render)
+            self.model.reparentTo(self.central_node)
+            pt1, pt2 = self.model.getTightBounds()
+            size = pt2.getX() - pt1.getX()
+            scale = radius / size
+            self.model.setScale(scale)
+            self.model.setPos(0, 0, 0)
             print("Model loaded successfully")
         except Exception as e:
             print(f"Error loading model: {e}")
@@ -38,7 +48,7 @@ class App(ShowBase):
         try:
             self.skybox_cubemap = self.loader.loadCubeMap("models/skybox/face_#.png")
             self.skybox = self.loader.loadModel("models/skybox/skybox.egg")
-            self.skybox.reparentTo(self.render)
+            self.skybox.reparentTo(self.central_node)
             self.skybox.setShader(Shader.load(Shader.SLGLSL, "shaders/skybox_vert.glsl", "shaders/skybox_frag.glsl"))
             self.skybox.setShaderInput("TexSkybox", self.skybox_cubemap)
             self.skybox.setAttrib(DepthTestAttrib.make(RenderAttrib.MLessEqual))
@@ -46,10 +56,6 @@ class App(ShowBase):
             print("Skybox loaded successfully")
         except Exception as e:
             print(f"Error loading skybox: {e}")
-
-        # Установка модели
-        self.model.setPos(0, 0, 0)
-        self.model.setScale(7)
 
         # Установка камеры
         self.camera.setPos(0, -40, 0)  # Отодвиньте камеру дальше
@@ -86,15 +92,12 @@ class App(ShowBase):
         self.accept("wheel_up", self.zoom_in)
         self.accept("wheel_down", self.zoom_out)
 
-
-        #self.setup_sprite(0, 0, 0)
-        #self.setup_orbit()
         self.setup_satellite()
 
     def setup_satellite(self):
-        self.satellites = [Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
-                           Satellite(a=200, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270)),
-                           Satellite(a=100, e=0.1, i=np.radians(-57), omega=np.radians(50), w=np.radians(0), m=np.radians(0))]
+        self.satellites = [Satellite(a=40, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
+                           Satellite(a=40, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270)),
+                           Satellite(a=6, e=0.1, i=np.radians(-57), omega=np.radians(50), w=np.radians(0), m=np.radians(0))]
         self.t0 = time.time()
         for satellite in self.satellites:
             x, y, z = satellite.position(self.t0, self.t0)
@@ -119,7 +122,7 @@ class App(ShowBase):
 
         # Количество сегментов для круга
         num_segments = 1000
-        orbit_points = satellite.orbit(1000)
+        orbit_points = satellite.orbit(num_segments)
 
         # Рисуем круг
         for x, y, z in orbit_points:
@@ -130,7 +133,7 @@ class App(ShowBase):
         orbit = NodePath(orbit_node)
 
         # Прикрепляем орбиту к сцене
-        orbit.reparent_to(self.model)
+        orbit.reparent_to(self.central_node)
         orbit.setLightOff()
 
         # Устанавливаем позицию орбиты относительно сцены
@@ -139,8 +142,9 @@ class App(ShowBase):
 
     def setup_sprite(self, x, y ,z):
         # Создаем CardMaker для создания спрайта
+        size = 0.5
         cm = CardMaker("sprite")
-        cm.set_frame(-1, 1, -1, 1)  # Размеры спрайта
+        cm.set_frame(-size, size, -size, size)  # Размеры спрайта
 
         # Создаем NodePath для спрайта
         sprite_node = cm.generate()
@@ -154,31 +158,16 @@ class App(ShowBase):
         sprite.set_transparency(TransparencyAttrib.M_alpha)
 
         # Прикрепляем спрайт к сцене
-        sprite.reparent_to(self.model)
+        sprite.reparent_to(self.central_node)
 
         # Устанавливаем позицию спрайта относительно сцены
         sprite.set_pos(x, y, z)  # Позиция спрайта в сцене
-        sprite.set_scale(5)  # Масштаб спрайта
 
         # Применяем эффект билборда, чтобы спрайт всегда был повернут к камере
         sprite.set_billboard_point_eye()
 
-        # Настраиваем спрайт, чтобы он не изменял размер при приближении камеры
-        sprite.setScale(5)
+        # Отключаем освещение для спрайта
         sprite.setLightOff()
-
-        def updateSpriteScale(task):
-            # Получаем расстояние от камеры до спрайта
-            distance = sprite.getPos(self.camera).length()
-
-            # Устанавливаем масштаб спрайта в зависимости от расстояния
-            scale = 3 * (np.sqrt(distance) / 20)
-            sprite.setScale(scale)
-
-            return task.cont
-
-        # Настраиваем обновление масштаба спрайта
-        self.taskMgr.add(updateSpriteScale, "updateSpriteScale")
 
         return sprite
 
@@ -193,25 +182,23 @@ class App(ShowBase):
         directionalLight = DirectionalLight("directionalLight")
         directionalLight.setDirection((LVector3(0, 1, 0)))
         directionalLight.setColor((5, 5, 5, 1))
-        directionalLightNode = self.render.attachNewNode(directionalLight)
-        self.render.setLight(directionalLightNode)
+        self.directionalLightNode = self.render.attachNewNode(directionalLight)
+        self.render.setLight(self.directionalLightNode)
 
-        '''# Создание точечного света
-        pointLight = PointLight("pointLight")
-        pointLight.setColor((1, 1, 1, 1))
-        pointLight.setAttenuation((1, 0, 0))
-        pointLightNode = self.render.attachNewNode(pointLight)
-        pointLightNode.setPos(0, 0, 10)
-        self.render.setLight(pointLightNode)
+        self.t1 = time.time()
+        self.taskMgr.add(self.update_light, "update_light")
 
-        # Создание прожекторного света
-        spotlight = Spotlight("spotlight")
-        spotlight.setColor((1, 1, 1, 1))
-        spotlight.setAttenuation((1, 0, 0))
-        spotlightNode = self.render.attachNewNode(spotlight)
-        spotlightNode.setPos(0, 0, 10)
-        spotlightNode.lookAt(0, 0, 0)
-        self.render.setLight(spotlightNode)'''
+    def update_light(self, task):
+        t = time.time()
+        delta_t = (self.t1 - t)
+        self.render.clearLight(self.directionalLightNode)
+        self.directionalLightNode.remove_node()
+        directionalLight = DirectionalLight("directionalLight")
+        directionalLight.setDirection((LVector3(-np.sin(np.radians(delta_t * 10)), np.cos(np.radians(delta_t * 10)), 0)))
+        directionalLight.setColor((5, 5, 5, 1))
+        self.directionalLightNode = self.render.attachNewNode(directionalLight)
+        self.render.setLight(self.directionalLightNode)
+        return task.again
 
     def start_rotation(self):
         # Сохранение начальной позиции мыши

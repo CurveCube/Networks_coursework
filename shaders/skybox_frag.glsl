@@ -8,5 +8,5 @@ uniform samplerCube TexSkybox;
 
 void main()
 {
-    fColor = texture(TexSkybox, fTexCoord);
+    fColor = texture(TexSkybox, fTexCoord) * 0.3;
 }
