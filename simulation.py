@@ -10,7 +10,8 @@ from panda3d.core import LineSegs, LPoint3, LVector3
 
 import simplepbr
 
-from satelite import Satellite
+from satellite import Satellite
+from earth import Earth
 import numpy as np
 import time
 
@@ -26,23 +27,19 @@ class App(ShowBase):
         super().__init__()
         self.pipeline = simplepbr.init()
 
+        self.incline = 23.5 # Наклон оси вращения Земли
+        self.center = 0, 0, 0
+
+        # Фиктивный узел, который задает наклон и расположение остальных объектов
         self.central_node = self.render.attachNewNode("central_node")
-        self.central_node.setPos(0, 0, 0)
-        self.central_node.setR(23.5)
+        self.central_node.setPos(*self.center)
+        self.central_node.setR(self.incline)
+
+        # Загрузка конфигурации
+        self.load_config()
         
-        # Загрузка модели GLTF
-        try:
-            radius = 6.371
-            self.model = self.loader.loadModel("models/earth/scene.gltf")
-            self.model.reparentTo(self.central_node)
-            pt1, pt2 = self.model.getTightBounds()
-            size = (pt2.getX() - pt1.getX()) / 2
-            scale = radius / size
-            self.model.setScale(scale)
-            self.model.setPos(0, 0, 0)
-            print("Model loaded successfully")
-        except Exception as e:
-            print(f"Error loading model: {e}")
+        # Установка модели Земли
+        self.setup_earth()
 
         # Загрузка окружения
         try:
@@ -60,12 +57,6 @@ class App(ShowBase):
         # Установка камеры
         self.camera.setPos(0, -40, 0)  # Отодвиньте камеру дальше
         self.camera.lookAt(0, 0, 0)
-
-        # Перемещение освещения из модели в рендер
-        self.model.clear_light()
-        for light in self.model.find_all_matches('**/+Light'):
-            light.parent.wrt_reparent_to(self.render)
-            self.render.set_light(light)
 
         # Добавление освещения
         self.setup_lights()
@@ -93,6 +84,15 @@ class App(ShowBase):
         self.accept("wheel_down", self.zoom_out)
 
         self.setup_satellite()
+
+    def load_config(self):
+        self.time_factor = 1000
+
+    def setup_earth(self):
+        self.earth = Earth(self.loader, self.time_factor)
+        self.earth.model.reparentTo(self.central_node)
+        self.earth.model.setPos(*self.center)
+        self.taskMgr.add(self.earth.update, "update_earth")
 
     def setup_satellite(self):
         self.satellites = [Satellite(a=40, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(358)),
@@ -185,21 +185,6 @@ class App(ShowBase):
         directionalLight.setColor((5, 5, 5, 1))
         self.directionalLightNode = self.render.attachNewNode(directionalLight)
         self.render.setLight(self.directionalLightNode)
-
-        self.t1 = time.time()
-        self.taskMgr.add(self.update_light, "update_light")
-
-    def update_light(self, task):
-        t = time.time()
-        delta_t = (self.t1 - t)
-        self.render.clearLight(self.directionalLightNode)
-        self.directionalLightNode.remove_node()
-        directionalLight = DirectionalLight("directionalLight")
-        directionalLight.setDirection((LVector3(-np.sin(np.radians(delta_t * 10)), np.cos(np.radians(delta_t * 10)), 0)))
-        directionalLight.setColor((5, 5, 5, 1))
-        self.directionalLightNode = self.render.attachNewNode(directionalLight)
-        self.render.setLight(self.directionalLightNode)
-        return task.again
 
     def start_rotation(self):
         # Сохранение начальной позиции мыши
