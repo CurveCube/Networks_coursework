@@ -95,9 +95,10 @@ class App(ShowBase):
         self.setup_satellite()
 
     def setup_satellite(self):
-        self.satellites = [Satellite(a=40, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(90)),
+        self.satellites = [Satellite(a=40, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(358)),
                            Satellite(a=40, e=0.7, i=np.radians(30), omega=np.radians(45), w=np.radians(60), m=np.radians(270)),
-                           Satellite(a=10, e=0.1, i=np.radians(-57), omega=np.radians(50), w=np.radians(0), m=np.radians(0))]
+                           Satellite(a=10, e=0.1, i=np.radians(-57), omega=np.radians(50), w=np.radians(0), m=np.radians(0)),
+                           Satellite(a=6.371, e=0, i=np.radians(0), omega=np.radians(0), w=np.radians(0), m=np.radians(0))]
         self.t0 = time.time()
         for satellite in self.satellites:
             x, y, z = satellite.position(self.t0, self.t0)

@@ -2,16 +2,16 @@ import numpy as np
 
 class Satellite:
     def __init__(self, a, e, i, omega, w, m, mu=398600.4418):
-        self.a = a # Большая полуось 
+        self.a = a # Большая полуось в тыс.км
         self.e = e # Эксцентриситет 
         self.i = i # Наклонение орбиты
         self.omega = omega # Долгота восходящего узла
         self.w = w # Аргумент перицентра 
         self.m = m # Средняя аномалия
-        self.mu = mu # Гравитационный параметр
+        self.mu = mu # Гравитационный параметр в км^3/с^2
 
     def mean_motion(self):
-        return np.sqrt(self.mu / self.a**3)
+        return np.sqrt(self.mu / (self.a * 1000) **3)
 
     def mean_anomaly(self, t, t0):
         n = self.mean_motion()
