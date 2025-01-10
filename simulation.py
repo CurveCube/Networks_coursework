@@ -6,6 +6,7 @@ from panda3d.core import AmbientLight, DirectionalLight, LVector3
 
 from camera_controller import CameraController
 from earth import Earth
+from network import Network
 from satellite import Satellite
 from satellite_dash import SatelliteDash
 from skybox import Skybox
@@ -90,6 +91,18 @@ class App(ShowBase):
 
         # Установка станций
         self.setup_satellite_dashes()
+
+        # Установка топологии сети
+        self.network = Network(
+            self.central_node,
+            self.earth,
+            self.satellites,
+            self.dashes,
+            "dash1",
+            "dash2",
+        )
+
+        self.taskMgr.add(self.network.update, "update_network")
 
     def setup_satellites(self):
         self.satellites = [
