@@ -6,7 +6,7 @@
     "recipient": 1,
     "dash_cone_angle": 60,
     "num_packages": 1000,
-    "time_factor": 100.0,
+    "time_factor": 10.0,
     "sending_interval": 0.1,
     "sprite_size": 0.5,
     "num_orbit_segments": 1000,

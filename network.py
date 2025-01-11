@@ -83,26 +83,21 @@ class Network:
             for satellite_id, satellite in self.satellites.items():
                 if cur_satellite_id == satellite_id or satellite_id in processed:
                     continue
-
+                
                 p1 = cur_satellite.pos
                 p2 = satellite.pos
-                e1 = np.sqrt(
-                    (p1[0] - self.earth.model.getX()) ** 2
-                    + (p1[1] - self.earth.model.getY()) ** 2
-                    + (p1[2] - self.earth.model.getZ()) ** 2
-                )
-                e2 = np.sqrt(
-                    (p2[0] - self.earth.model.getX()) ** 2
-                    + (p2[1] - self.earth.model.getY()) ** 2
-                    + (p2[2] - self.earth.model.getZ()) ** 2
-                )
-                e3 = np.sqrt(
-                    (p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2 + (p1[2] - p2[2]) ** 2
-                )
-                p = (e1 + e2 + e3) / 2
-                h = 2 * np.sqrt(p * (p - e1) * (p - e2) * (p - e3)) / e3
-                if h > self.earth.radius:
+                e1 = [(p1[0] - self.earth.model.getX()), (p1[1] - self.earth.model.getY()), (p1[2] - self.earth.model.getZ())]
+                e3 = [(p1[0] - p2[0]), (p1[1] - p2[1]), (p1[2] - p2[2])]
+                e1_mod2 = e1[0] ** 2 + e1[1] ** 2 + e1[2] ** 2
+                e3_mod2 = e3[0] ** 2 + e3[1] ** 2 + e3[2] ** 2
+
+                cos_beta_2 = (e1[0] * e3[0] + e1[1] * e3[1] + e1[2] * e3[2]) ** 2 / (e1_mod2 * e3_mod2)
+
+                cos_alpha_2 = self.earth.radius / e1_mod2
+
+                if cos_beta_2 < cos_alpha_2:
                     self.graph.add_edge(cur_satellite_id, satellite_id)
+
             processed.add(cur_satellite_id)
 
         self.path = self.get_shortest_path()
