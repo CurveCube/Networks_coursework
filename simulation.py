@@ -8,7 +8,7 @@ from json import load
 from camera_controller import CameraController
 from earth import Earth
 from network import Network
-from satellite import Satellite
+from satellite import Satellite, Calculator
 from satellite_dash import SatelliteDash
 from skybox import Skybox
 
@@ -118,6 +118,7 @@ class App(ShowBase):
         self.satellites = []
         sprite_size = config["sprite_size"]
         time_factor = config["time_factor"]
+        self.calculator = Calculator(time_factor)
         num_orbit_segments = config["num_orbit_segments"]
         orbit_color = tuple(config["orbit_color"])
         orbit_thickness = config["orbit_thickness"]
@@ -127,6 +128,7 @@ class App(ShowBase):
                 self.central_node,
                 self.earth_pos,
                 f"s_{i}",
+                calculator=self.calculator,
                 a=satellite_info["a"],
                 e=satellite_info["e"],
                 i=np.radians(satellite_info["i"]),
@@ -136,14 +138,15 @@ class App(ShowBase):
                 sprite_size=sprite_size,
                 num_orbit_segments=num_orbit_segments,
                 line_color=orbit_color,
-                line_thickness=orbit_thickness,
-                time_factor=time_factor,
+                line_thickness=orbit_thickness
             )
             self.satellites.append(satellite)
+        self.calculator.update_position()
         self.taskMgr.add(self.update_satellites, "update_satellites")
         print("count: ", len(self.satellites))
 
     def update_satellites(self, task):
+        self.calculator.update_position()
         for satellite in self.satellites:
             satellite.update()
         return task.again

@@ -5,6 +5,85 @@ from panda3d.core import CardMaker, LineSegs, LPoint3, NodePath, TransparencyAtt
 
 from node import Node
 
+class Calculator:
+    def __init__(self, time_factor):
+        self.t0 = time.time()
+        self.time_factor = time_factor
+        self.a = np.array([], dtype=np.float64).reshape(0, 1)  # Большая полуось в тыс.км
+        self.e = np.array([], dtype=np.float64).reshape(0, 1)  # Эксцентриситет
+        self.i = np.array([], dtype=np.float64).reshape(0, 1)  # Наклонение орбиты
+        self.omega = np.array([], dtype=np.float64).reshape(0, 1)  # Долгота восходящего узла
+        self.w = np.array([], dtype=np.float64).reshape(0, 1)  # Аргумент перицентра
+        self.m = np.array([], dtype=np.float64).reshape(0, 1)  # Средняя аномалия
+        self.mu = np.array([], dtype=np.float64).reshape(0, 1)  # Гравитационный параметр в км^3/с^2
+
+    def add_satellite(self, satellite):
+        self.a = np.vstack((self.a, satellite.a))
+        self.e = np.vstack((self.e, satellite.e))
+        self.i = np.vstack((self.i, satellite.i))
+        self.omega = np.vstack((self.omega, satellite.omega))
+        self.w = np.vstack((self.w, satellite.w))
+        self.m = np.vstack((self.m, satellite.m))
+        self.mu = np.vstack((self.mu, satellite.mu))
+        return self.a.shape[0] - 1
+    
+    def mean_motion(self):
+        return np.sqrt(self.mu / (self.a * 1000) ** 3)
+
+    def mean_anomaly(self, delta_t):
+        n = self.mean_motion()
+        return self.m + n * delta_t
+
+    def eccentric_anomaly(self, M):
+        E = M
+        for _ in range(10):  # Метод Ньютона для решения уравнения Кеплера
+            E_next = E + (M - E + self.e * np.sin(E)) / (1 - self.e * np.cos(E))
+            if np.all(np.abs(E_next - E) < 1e-8):
+                break
+            E = E_next
+        return E
+
+    def true_anomaly(self, E):
+        return 2 * np.arctan2(
+            np.sqrt(1 - self.e) * np.cos(E / 2), np.sqrt(1 + self.e) * np.sin(E / 2)
+        )
+
+    def radius(self, E):
+        return self.a * (1 - self.e * np.cos(E))
+
+    def update_position(self):
+        t = time.time()
+        delta_t = (self.t0 - t) * self.time_factor
+        M = self.mean_anomaly(delta_t)
+        E = self.eccentric_anomaly(M)
+        nu = self.true_anomaly(E)
+        r = self.radius(E)
+
+        x_orb = r * np.cos(nu)
+        y_orb = r * np.sin(nu)
+
+        # Вычисление координат в экваториальной плоскости
+        self.x_eq = x_orb * (
+            np.cos(self.omega) * np.cos(self.w)
+            - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)
+        ) - y_orb * (
+            np.cos(self.omega) * np.sin(self.w)
+            + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i)
+        )
+        self.y_eq = x_orb * (
+            np.sin(self.omega) * np.cos(self.w)
+            + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i)
+        ) + y_orb * (
+            -np.sin(self.omega) * np.sin(self.w)
+            + np.cos(self.omega) * np.cos(self.w) * np.cos(self.i)
+        )
+        self.z_eq = x_orb * np.sin(self.i) * np.sin(self.w) + y_orb * np.sin(
+            self.i
+        ) * np.cos(self.w)
+
+    def get_satellite_position(self, index):
+        return (self.x_eq[index], self.y_eq[index], self.z_eq[index])
+
 
 class Satellite(Node):
     def __init__(
@@ -13,6 +92,7 @@ class Satellite(Node):
         parent,
         pos_shift,
         id,
+        calculator,
         a,
         e,
         i,
@@ -24,7 +104,6 @@ class Satellite(Node):
         num_orbit_segments=1000,
         line_color=(1, 1, 1, 0.8),
         line_thickness=1.5,
-        time_factor=100,
     ):
         super().__init__(id)
 
@@ -35,9 +114,6 @@ class Satellite(Node):
 
         self.pos_shift = pos_shift
 
-        self.t0 = time.time()
-        self.time_factor = time_factor
-
         self.a = a  # Большая полуось в тыс.км
         self.e = e  # Эксцентриситет
         self.i = i  # Наклонение орбиты
@@ -45,6 +121,9 @@ class Satellite(Node):
         self.w = w  # Аргумент перицентра
         self.m = m  # Средняя аномалия
         self.mu = mu  # Гравитационный параметр в км^3/с^2
+
+        self.calculator = calculator
+        self.index = self.calculator.add_satellite(self)
 
         self.setup_sprite(loader, parent)
         self.setup_orbit(parent)
@@ -72,36 +151,9 @@ class Satellite(Node):
 
     def radius(self, E):
         return self.a * (1 - self.e * np.cos(E))
-
-    def position(self, delta_t):
-        M = self.mean_anomaly(delta_t)
-        E = self.eccentric_anomaly(M)
-        nu = self.true_anomaly(E)
-        r = self.radius(E)
-
-        x_orb = r * np.cos(nu)
-        y_orb = r * np.sin(nu)
-
-        # Вычисление координат в экваториальной плоскости
-        x_eq = x_orb * (
-            np.cos(self.omega) * np.cos(self.w)
-            - np.sin(self.omega) * np.sin(self.w) * np.cos(self.i)
-        ) - y_orb * (
-            np.cos(self.omega) * np.sin(self.w)
-            + np.sin(self.omega) * np.cos(self.w) * np.cos(self.i)
-        )
-        y_eq = x_orb * (
-            np.sin(self.omega) * np.cos(self.w)
-            + np.cos(self.omega) * np.sin(self.w) * np.cos(self.i)
-        ) + y_orb * (
-            -np.sin(self.omega) * np.sin(self.w)
-            + np.cos(self.omega) * np.cos(self.w) * np.cos(self.i)
-        )
-        z_eq = x_orb * np.sin(self.i) * np.sin(self.w) + y_orb * np.sin(
-            self.i
-        ) * np.cos(self.w)
-
-        return x_eq, y_eq, z_eq
+    
+    def position(self):
+        return self.calculator.get_satellite_position(self.index)
 
     def _orbit(self):
         rad = np.linspace(0, 2 * np.pi, self.num_orbit_segments + 1)
@@ -180,8 +232,8 @@ class Satellite(Node):
         self.sprite.reparent_to(parent)
 
         # Устанавливаем позицию спрайта относительно сцены
-        x, y, z = self.position(0.0)
-        print("satellite coords: ", x, y, z)
+        #x, y, z = self.position()
+        x, y, z = 0.0, 0.0, 0.0
         self.sprite.set_pos(
             x + self.pos_shift[0], y + self.pos_shift[1], z + self.pos_shift[2]
         )
@@ -193,9 +245,7 @@ class Satellite(Node):
         self.sprite.setLightOff()
 
     def update(self):
-        t = time.time()
-        delta_t = (self.t0 - t) * self.time_factor
-        x, y, z = self.position(delta_t)
+        x, y, z = self.position()
         self.sprite.set_pos(
             x + self.pos_shift[0], y + self.pos_shift[1], z + self.pos_shift[2]
         )
