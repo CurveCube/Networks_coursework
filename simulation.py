@@ -106,9 +106,8 @@ class App(ShowBase):
             self.dashes,
             f"d_{config['sender']}",
             f"d_{config['recipient']}",
-            tuple(config["line_color"]),
+            config["dash_cone_angle"],
             tuple(config["path_color"]),
-            config["line_thickness"],
             config["path_thickness"],
         )
 
@@ -143,7 +142,6 @@ class App(ShowBase):
             self.satellites.append(satellite)
         self.calculator.update_position()
         self.taskMgr.add(self.update_satellites, "update_satellites")
-        print("count: ", len(self.satellites))
 
     def update_satellites(self, task):
         self.calculator.update_position()
