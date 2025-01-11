@@ -3,6 +3,7 @@ import panda3d.core as p3d
 import simplepbr
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import AmbientLight, DirectionalLight, LVector3
+from json import load
 
 from camera_controller import CameraController
 from earth import Earth
@@ -17,6 +18,8 @@ p3d.load_prc_file_data(
     "texture-minfilter mipmap\n"
     "texture-anisotropic-degree 16\n",
 )
+
+CONFIG_PATH = "config.json"
 
 
 class App(ShowBase):
@@ -70,11 +73,14 @@ class App(ShowBase):
         self.render.setLight(self.directionalLightNode)
 
     def load_config(self):
-        self.earth.time_factor = 1000
+        with open(CONFIG_PATH, "r") as f:
+            config = load(f)
+
+        self.earth.time_factor = config["time_factor"]
 
         # Настройка управления камерой
         self.camera_controller = CameraController(
-            self.camera, self.taskMgr, self.mouseWatcherNode, self.center
+            self.camera, self.taskMgr, self.mouseWatcherNode, self.center, config["camera_rotation_angle"], config["camera_rotation_angle_vertical"], config["camera_radius"]
         )
 
         # Отключение управления мышью по умолчанию
@@ -87,10 +93,10 @@ class App(ShowBase):
         self.accept("wheel_down", self.camera_controller.zoom_out)
 
         # Установка спутников
-        self.setup_satellites()
+        self.setup_satellites(config)
 
         # Установка станций
-        self.setup_satellite_dashes()
+        self.setup_satellite_dashes(config)
 
         # Установка топологии сети
         self.network = Network(
@@ -98,106 +104,58 @@ class App(ShowBase):
             self.earth,
             self.satellites,
             self.dashes,
-            "dash1",
-            "dash2",
+            f"d_{config['sender']}",
+            f"d_{config['recipient']}",
+            tuple(config["line_color"]),
+            tuple(config["path_color"]),
+            config["line_thickness"],
+            config["path_thickness"],
         )
 
         self.taskMgr.add(self.network.update, "update_network")
 
-    def setup_satellites(self):
-        self.satellites = [
-            Satellite(
+    def setup_satellites(self, config):
+        self.satellites = []
+        sprite_size = config["sprite_size"]
+        time_factor = config["time_factor"]
+        num_orbit_segments = config["num_orbit_segments"]
+        orbit_color = tuple(config["orbit_color"])
+        orbit_thickness = config["orbit_thickness"]
+        for i, satellite_info in enumerate(config["satellites"]):
+            satellite = Satellite(
                 self.loader,
                 self.central_node,
                 self.earth_pos,
-                "satellite1",
-                a=40,
-                e=0.7,
-                i=np.radians(30),
-                omega=np.radians(45),
-                w=np.radians(90),
-                m=np.radians(358),
-                time_factor=1000,
-            ),
-            Satellite(
-                self.loader,
-                self.central_node,
-                self.earth_pos,
-                "satellite2",
-                a=40,
-                e=0.7,
-                i=np.radians(30),
-                omega=np.radians(45),
-                w=np.radians(60),
-                m=np.radians(270),
-                time_factor=1000,
-            ),
-            Satellite(
-                self.loader,
-                self.central_node,
-                self.earth_pos,
-                "satellite3",
-                a=10,
-                e=0.1,
-                i=np.radians(-57),
-                omega=np.radians(50),
-                w=np.radians(0),
-                m=np.radians(0),
-                time_factor=1000,
-            ),
-            Satellite(
-                self.loader,
-                self.central_node,
-                self.earth_pos,
-                "satellite4",
-                a=6.5,
-                e=0,
-                i=np.radians(0),
-                omega=np.radians(0),
-                w=np.radians(30),
-                m=np.radians(0),
-                time_factor=1000,
-            ),
-            Satellite(
-                self.loader,
-                self.central_node,
-                self.earth_pos,
-                "satellite5",
-                a=6.5,
-                e=0,
-                i=np.radians(90),
-                omega=np.radians(90),
-                w=np.radians(0),
-                m=np.radians(0),
-                time_factor=1000,
-            ),
-            Satellite(
-                self.loader,
-                self.central_node,
-                self.earth_pos,
-                "satellite6",
-                a=6.5,
-                e=0,
-                i=np.radians(90),
-                omega=np.radians(0),
-                w=np.radians(0),
-                m=np.radians(50),
-                time_factor=1000,
-            ),
-        ]
-        for i, satellite in enumerate(self.satellites):
-            self.taskMgr.add(satellite.update, f"update_satellite_{i}")
+                f"s_{i}",
+                a=satellite_info["a"],
+                e=satellite_info["e"],
+                i=np.radians(satellite_info["i"]),
+                omega=np.radians(satellite_info["omega"]),
+                w=np.radians(satellite_info["w"]),
+                m=np.radians(satellite_info["m"]),
+                sprite_size=sprite_size,
+                num_orbit_segments=num_orbit_segments,
+                line_color=orbit_color,
+                line_thickness=orbit_thickness,
+                time_factor=time_factor,
+            )
+            self.satellites.append(satellite)
+        self.taskMgr.add(self.update_satellites, "update_satellites")
+        print("count: ", len(self.satellites))
 
-    def setup_satellite_dashes(self):
-        self.dashes = [
-            SatelliteDash(
-                self.loader, self.central_node, "dash1", self.earth, 59.57, 30.19
-            ),
-            SatelliteDash(
-                self.loader, self.central_node, "dash2", self.earth, 40.42, -74.00
-            ),
-        ]
-        for i, dash in enumerate(self.dashes):
+    def update_satellites(self, task):
+        for satellite in self.satellites:
+            satellite.update()
+        return task.again
+
+    def setup_satellite_dashes(self, config):
+        self.dashes = []
+        sprite_size = config["sprite_size"]
+        for i, dash_info in enumerate(config["dashes"]):
+            dash = SatelliteDash(
+                self.loader, self.central_node, f"d_{i}", self.earth, dash_info["lat"], dash_info["long"], sprite_size
+            )
+            self.dashes.append(dash)
             self.taskMgr.add(dash.update, f"update_dash_{i}")
 
 

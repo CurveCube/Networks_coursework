@@ -2,6 +2,7 @@ import networkx as nx
 import numpy as np
 from networkx.algorithms.shortest_paths.generic import shortest_path
 from panda3d.core import LineSegs, LPoint3, NodePath
+import time
 
 
 class Network:
@@ -34,13 +35,13 @@ class Network:
 
         self.satellites = {}
         for satellite in satellites:
-            self.satellites[satellite.name] = satellite
-            self.graph.add_node(satellite.name)
+            self.satellites[satellite.id] = satellite
+            self.graph.add_node(satellite.id)
 
         self.dashes = {}
         for dash in dashes:
-            self.dashes[dash.name] = dash
-            self.graph.add_node(dash.name)
+            self.dashes[dash.id] = dash
+            self.graph.add_node(dash.id)
 
     def weight(self, node1, node2, attrs):
         if node1 in self.dashes:
@@ -62,14 +63,15 @@ class Network:
             return []
 
     def _update(self):
+        print(time.time())
         for line in self.lines:
             line.remove_node()
         self.graph.clear_edges()
 
         self.lines = []
         processed = set()
-        for dash_name, dash in self.dashes.items():
-            for satellite_name, satellite in self.satellites.items():
+        for dash_id, dash in self.dashes.items():
+            for satellite_id, satellite in self.satellites.items():
                 p1 = dash.pos
                 p2 = satellite.pos
                 e1 = np.sqrt(
@@ -88,7 +90,7 @@ class Network:
                 p = (e1 + e2 + e3) / 2
                 h = 2 * np.sqrt(p * (p - e1) * (p - e2) * (p - e3)) / e3
                 if h > self.earth.radius:
-                    ls = LineSegs()
+                    '''ls = LineSegs()
                     ls.set_color(*self.lines_color)
                     ls.set_thickness(self.lines_thickness)
 
@@ -108,11 +110,11 @@ class Network:
 
                     # Устанавливаем позицию отрезка относительно сцены
                     line.set_pos(self.earth.model.getPos())
-                    self.lines.append(line)
-                    self.graph.add_edge(dash_name, satellite_name)
-        for cur_satellite_name, cur_satellite in self.satellites.items():
-            for satellite_name, satellite in self.satellites.items():
-                if cur_satellite_name == satellite_name or satellite_name in processed:
+                    self.lines.append(line)'''
+                    self.graph.add_edge(dash_id, satellite_id)
+        for cur_satellite_id, cur_satellite in self.satellites.items():
+            for satellite_id, satellite in self.satellites.items():
+                if cur_satellite_id == satellite_id or satellite_id in processed:
                     continue
 
                 p1 = cur_satellite.pos
@@ -133,7 +135,7 @@ class Network:
                 p = (e1 + e2 + e3) / 2
                 h = 2 * np.sqrt(p * (p - e1) * (p - e2) * (p - e3)) / e3
                 if h > self.earth.radius:
-                    ls = LineSegs()
+                    '''ls = LineSegs()
                     ls.set_color(*self.lines_color)
                     ls.set_thickness(self.lines_thickness)
 
@@ -153,11 +155,12 @@ class Network:
 
                     # Устанавливаем позицию отрезка относительно сцены
                     line.set_pos(self.earth.model.getPos())
-                    self.lines.append(line)
-                    self.graph.add_edge(cur_satellite_name, satellite_name)
-            processed.add(cur_satellite_name)
+                    self.lines.append(line)'''
+                    self.graph.add_edge(cur_satellite_id, satellite_id)
+            processed.add(cur_satellite_id)
 
         self.path = self.get_shortest_path()
+        print(self.path)
         if len(self.path) < 2:
             return
 

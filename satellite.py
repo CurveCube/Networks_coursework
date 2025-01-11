@@ -12,7 +12,7 @@ class Satellite(Node):
         loader,
         parent,
         pos_shift,
-        name,
+        id,
         a,
         e,
         i,
@@ -26,7 +26,7 @@ class Satellite(Node):
         line_thickness=1.5,
         time_factor=100,
     ):
-        super().__init__(name)
+        super().__init__(id)
 
         self.sprite_size = sprite_size
         self.num_orbit_segments = num_orbit_segments
@@ -192,14 +192,13 @@ class Satellite(Node):
         # Отключаем освещение для спрайта
         self.sprite.setLightOff()
 
-    def update(self, task):
+    def update(self):
         t = time.time()
         delta_t = (self.t0 - t) * self.time_factor
         x, y, z = self.position(delta_t)
         self.sprite.set_pos(
             x + self.pos_shift[0], y + self.pos_shift[1], z + self.pos_shift[2]
         )
-        return task.again
 
     @property
     def pos(self) -> tuple:

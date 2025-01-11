@@ -9,13 +9,13 @@ class SatelliteDash(Node):
         self,
         loader,
         parent,
-        name,
+        id,
         earth,
         lat,
         long,
         sprite_size=1,
     ):
-        super().__init__(name)
+        super().__init__(id)
 
         self.sprite_size = sprite_size
         self.earth = earth  # Привязка к модели Земли
