@@ -30,7 +30,8 @@ class Network:
         self.path_color = path_color
         self.path_thickness = path_thickness
 
-        self.dash_cone_cos2 = np.cos(np.radians(dash_cone_angle)) ** 2
+        #self.dash_cone_cos2 = np.cos(np.radians(dash_cone_angle)) ** 2
+        self.dash_cone_cos2 = np.cos(np.radians(dash_cone_angle))
 
         self.satellites = {}
         for satellite in satellites:
@@ -72,11 +73,9 @@ class Network:
             for satellite_id, satellite in self.satellites.items():
                 p1 = dash.pos
                 p2 = satellite.pos
-                cos2 = ((p2[0] - p1[0]) * (p1[0] - self.earth.model.getX()) + (p2[1] - p1[1]) * (p1[1] - self.earth.model.getY()) + (p2[1] - p1[1]) * (p1[2] - self.earth.model.getZ())) ** 2 / (
-                    (p1[0] - self.earth.model.getX()) ** 2 + (p1[1] - self.earth.model.getY()) ** 2 + (p1[2] - self.earth.model.getZ()) ** 2
-                ) / (
-                    (p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2 + (p2[2] - p1[2]) ** 2
-                )
+                e1 = [p1[0] - self.earth.model.getX(), p1[1] - self.earth.model.getY(), p1[2] - self.earth.model.getZ()]
+                e2 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]
+                cos2 = (e1[0] * e2[0] + e1[1] * e2[1] + e1[2] * e2[2]) / np.sqrt((e1[0]*e1[0] + e1[1]*e1[1] + e1[2]*e1[2]) * (e2[0]*e2[0] + e2[1]*e2[1] + e2[2]*e2[2]))
                 if cos2 > self.dash_cone_cos2:
                     self.graph.add_edge(dash_id, satellite_id)
         for cur_satellite_id, cur_satellite in self.satellites.items():
@@ -86,10 +85,11 @@ class Network:
                 
                 p1 = cur_satellite.pos
                 p2 = satellite.pos
-                e1 = [(p1[0] - self.earth.model.getX()), (p1[1] - self.earth.model.getY()), (p1[2] - self.earth.model.getZ())]
-                e3 = [(p1[0] - p2[0]), (p1[1] - p2[1]), (p1[2] - p2[2])]
-                e1_mod2 = e1[0] ** 2 + e1[1] ** 2 + e1[2] ** 2
+                e3 = [(p2[0] - p1[0]), (p2[1] - p1[1]), (p2[2] - p1[2])]
                 e3_mod2 = e3[0] ** 2 + e3[1] ** 2 + e3[2] ** 2
+                e1 = [(p1[0] - self.earth.model.getX()), (p1[1] - self.earth.model.getY()), (p1[2] - self.earth.model.getZ())]   
+                e1_mod2 = e1[0] ** 2 + e1[1] ** 2 + e1[2] ** 2
+                
 
                 cos_beta_2 = (e1[0] * e3[0] + e1[1] * e3[1] + e1[2] * e3[2]) ** 2 / (e1_mod2 * e3_mod2)
 
