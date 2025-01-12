@@ -91,6 +91,8 @@ class App(ShowBase):
         self.accept("mouse1-up", self.camera_controller.stop_rotation)
         self.accept("wheel_up", self.camera_controller.zoom_in)
         self.accept("wheel_down", self.camera_controller.zoom_out)
+        self.accept("arrow_up", self.increase_time_factor)
+        self.accept("arrow_down", self.decrease_time_factor)
 
         # Установка спутников
         self.setup_satellites(config)
@@ -112,6 +114,14 @@ class App(ShowBase):
         )
 
         self.taskMgr.add(self.network.update, "update_network")
+
+    def increase_time_factor(self):
+        self.earth.time_factor *= 10
+        self.calculator.time_factor = self.calculator.time_factor * 10
+
+    def decrease_time_factor(self):
+        self.earth.time_factor /= 10
+        self.calculator.time_factor = self.calculator.time_factor / 10
 
     def setup_satellites(self, config):
         self.satellites = []

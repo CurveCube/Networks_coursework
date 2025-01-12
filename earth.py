@@ -24,8 +24,10 @@ class Earth:
 
     def update(self, task):
         # Вращение модели
-        delta_t = self.t0 - time.time()
-        self.angle = delta_t * self.rotation_step * self.time_factor
+        t = time.time()
+        delta_t = self.t0 - t
+        self.angle += delta_t * self.rotation_step * self.time_factor
         self.model.setH(self.angle)
+        self.t0 = t
 
         return task.again

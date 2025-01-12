@@ -8,7 +8,7 @@ from node import Node
 class Calculator:
     def __init__(self, time_factor):
         self.t0 = time.time()
-        self.time_factor = time_factor
+        self._time_factor = time_factor
         self.a = np.array([], dtype=np.float64).reshape(0, 1)  # Большая полуось в тыс.км
         self.e = np.array([], dtype=np.float64).reshape(0, 1)  # Эксцентриситет
         self.i = np.array([], dtype=np.float64).reshape(0, 1)  # Наклонение орбиты
@@ -16,6 +16,17 @@ class Calculator:
         self.w = np.array([], dtype=np.float64).reshape(0, 1)  # Аргумент перицентра
         self.m = np.array([], dtype=np.float64).reshape(0, 1)  # Средняя аномалия
         self.mu = np.array([], dtype=np.float64).reshape(0, 1)  # Гравитационный параметр в км^3/с^2
+
+    @property
+    def time_factor(self):
+        return self._time_factor
+    
+    @time_factor.setter
+    def time_factor(self, value):
+        t = time.time()
+        self.m = self.m + self.mean_motion() * (self.t0 - t) * self._time_factor
+        self.t0 = t
+        self._time_factor = value
 
     def add_satellite(self, satellite):
         self.a = np.vstack((self.a, satellite.a))
@@ -53,7 +64,7 @@ class Calculator:
 
     def update_position(self):
         t = time.time()
-        delta_t = (self.t0 - t) * self.time_factor
+        delta_t = (self.t0 - t) * self._time_factor
         M = self.mean_anomaly(delta_t)
         E = self.eccentric_anomaly(M)
         nu = self.true_anomaly(E)
