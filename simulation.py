@@ -93,6 +93,7 @@ class App(ShowBase):
         self.accept("wheel_down", self.camera_controller.zoom_out)
         self.accept("arrow_up", self.increase_time_factor)
         self.accept("arrow_down", self.decrease_time_factor)
+        self.accept("s", self.test_send)
 
         # Установка спутников
         self.setup_satellites(config)
@@ -106,8 +107,10 @@ class App(ShowBase):
             self.earth,
             self.satellites,
             self.dashes,
-            f"d_{config['sender']}",
-            f"d_{config['recipient']}",
+            config['sending_interval'],
+            config['loss_probability'],
+            config['window_size'],
+            config['timeout'],
             config['update_topology_interval'],
             config["dash_cone_angle"],
             tuple(config["path_color"]),
@@ -170,9 +173,11 @@ class App(ShowBase):
             self.dashes.append(dash)
             self.taskMgr.add(dash.update, f"update_dash_{i}")
 
+    def test_send(self):
+        self.network.send("d_0", "d_1", 100)
+
     def close(self):
-        self.network.timer.cancel()
-        print("close")
+        self.network.close()
 
 
 def main():

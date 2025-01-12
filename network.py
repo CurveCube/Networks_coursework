@@ -3,6 +3,8 @@ import numpy as np
 from networkx.algorithms.shortest_paths.generic import shortest_path
 from panda3d.core import LineSegs, LPoint3, NodePath
 from threading import Timer
+from protocol_srb import SRP_receiver, SRP_sender
+from message import MsgQueue
 
 
 class Network:
@@ -12,8 +14,10 @@ class Network:
         earth,
         satellites,
         dashes,
-        sender,
-        recipient,
+        sending_interval=0.1,
+        loss_probability=0.2,
+        window_size=8,
+        timeout=0.5,
         update_interval=0.5,
         dash_cone_angle=60,
         path_color=(0, 1, 0, 0.8),
@@ -24,16 +28,26 @@ class Network:
 
         self.lines = []
         self.graph = nx.Graph()
-        self.sender = sender
-        self.recipient = recipient
+        self.sender = None
+        self.recipient = None
         self.path = []
 
+        self.srp_sender = None
+        self.srp_reciever = None
+        self.send_msg_queue = None
+        self.answer_msg_queue = None
+        self.posted_msgs = None
+        self.received_msgs = None
+
         self.update_interval = update_interval
+        self.sending_interval = sending_interval
+        self.loss_probability = loss_probability
+        self.window_size = window_size
+        self.timeout = timeout
 
         self.path_color = path_color
         self.path_thickness = path_thickness
 
-        #self.dash_cone_cos2 = np.cos(np.radians(dash_cone_angle)) ** 2
         self.dash_cone_cos2 = np.cos(np.radians(dash_cone_angle))
 
         self.satellites = {}
@@ -46,8 +60,43 @@ class Network:
             self.dashes[dash.id] = dash
             self.graph.add_node(dash.id)
 
-        self.timer = Timer(self.update_interval, self.update_topology)
-        self.timer.start()
+        self.topology_timer = Timer(self.update_interval, self.update_topology)
+        self.topology_timer.start()
+
+        self.sending_timer = None
+
+    def send(self, sender, recipient, packages_count):
+        self.sender = sender
+        self.recipient = recipient
+
+        self.send_msg_queue = MsgQueue(self.loss_probability)
+        self.answer_msg_queue = MsgQueue(self.loss_probability)
+        self.posted_msgs = []
+        self.received_msgs = []
+
+        self.srp_sender = SRP_sender(self.answer_msg_queue, self.send_msg_queue, self.posted_msgs, self.window_size, packages_count, self.timeout)
+        self.srp_reciever = SRP_receiver(self.answer_msg_queue, self.send_msg_queue, self.received_msgs)
+        
+        self.sending_timer = Timer(self.sending_interval, self._send)
+        self.sending_timer.start()
+
+    def _send(self):
+        self.check_path()
+
+        if len(self.path) > 0:
+            self.srp_sender.send()
+            self.srp_reciever.receive()
+
+        if not self.srp_sender.is_finished():
+            self.sending_timer = Timer(self.sending_interval, self._send)
+            self.sending_timer.start()
+        else:
+            print(f"Sending from {self.sender} to {self.recipient} finished")
+
+    def close(self):
+        self.topology_timer.cancel()
+        if self.sending_timer:
+            self.sending_timer.cancel()
 
     def update_topology(self):
         self.graph.clear_edges()
@@ -83,10 +132,11 @@ class Network:
 
             processed.add(cur_satellite_id)
 
-        self.path = self.get_shortest_path()
+        if self.sender and self.recipient:
+            self.path = self.get_shortest_path()
 
-        self.timer = Timer(self.update_interval, self.update_topology)
-        self.timer.start()
+        self.topology_timer = Timer(self.update_interval, self.update_topology)
+        self.topology_timer.start()
 
     def weight(self, node1, node2, attrs):
         if node1 in self.dashes:
@@ -108,7 +158,8 @@ class Network:
             return []
         
     def check_path(self):
-        if len(self.path) < 3:
+        if len(self.path) < 3 or not self.sender or not self.recipient:
+            self.path = []
             return
         
         dash_id = self.path[0]
@@ -164,7 +215,7 @@ class Network:
         self.lines = []
         self.check_path()
         
-        if len(self.path) < 3:
+        if len(self.path) == 0:
             return
 
         ls = LineSegs()
