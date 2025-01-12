@@ -108,6 +108,7 @@ class App(ShowBase):
             self.dashes,
             f"d_{config['sender']}",
             f"d_{config['recipient']}",
+            config['update_topology_interval'],
             config["dash_cone_angle"],
             tuple(config["path_color"]),
             config["path_thickness"],
@@ -169,9 +170,17 @@ class App(ShowBase):
             self.dashes.append(dash)
             self.taskMgr.add(dash.update, f"update_dash_{i}")
 
+    def close(self):
+        self.network.timer.cancel()
+        print("close")
+
 
 def main():
-    App().run()
+    app = App()
+    try:
+        app.run()
+    except:
+        app.close()
 
 
 if __name__ == "__main__":

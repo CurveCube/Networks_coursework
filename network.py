@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 from networkx.algorithms.shortest_paths.generic import shortest_path
 from panda3d.core import LineSegs, LPoint3, NodePath
-import time
+from threading import Timer
 
 
 class Network:
@@ -14,6 +14,7 @@ class Network:
         dashes,
         sender,
         recipient,
+        update_interval=0.5,
         dash_cone_angle=60,
         path_color=(0, 1, 0, 0.8),
         path_thickness=1.5,
@@ -26,6 +27,8 @@ class Network:
         self.sender = sender
         self.recipient = recipient
         self.path = []
+
+        self.update_interval = update_interval
 
         self.path_color = path_color
         self.path_thickness = path_thickness
@@ -43,31 +46,12 @@ class Network:
             self.dashes[dash.id] = dash
             self.graph.add_node(dash.id)
 
-    def weight(self, node1, node2, attrs):
-        if node1 in self.dashes:
-            p1 = self.dashes[node1].pos
-            p2 = self.satellites[node2].pos
-        elif node2 in self.dashes:
-            p1 = self.dashes[node2].pos
-            p2 = self.satellites[node1].pos
-        else:
-            p1 = self.satellites[node1].pos
-            p2 = self.satellites[node2].pos
-        weight = (p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2 + (p2[2] - p1[2]) ** 2
-        return weight
+        self.timer = Timer(self.update_interval, self.update_topology)
+        self.timer.start()
 
-    def get_shortest_path(self):
-        try:
-            return shortest_path(self.graph, self.sender, self.recipient, self.weight)
-        except:
-            return []
-
-    def _update(self):
-        for line in self.lines:
-            line.remove_node()
+    def update_topology(self):
         self.graph.clear_edges()
 
-        self.lines = []
         processed = set()
         for dash_id, dash in self.dashes.items():
             for satellite_id, satellite in self.satellites.items():
@@ -89,7 +73,6 @@ class Network:
                 e3_mod2 = e3[0] ** 2 + e3[1] ** 2 + e3[2] ** 2
                 e1 = [(p1[0] - self.earth.model.getX()), (p1[1] - self.earth.model.getY()), (p1[2] - self.earth.model.getZ())]   
                 e1_mod2 = e1[0] ** 2 + e1[1] ** 2 + e1[2] ** 2
-                
 
                 cos_beta_2 = (e1[0] * e3[0] + e1[1] * e3[1] + e1[2] * e3[2]) ** 2 / (e1_mod2 * e3_mod2)
 
@@ -101,8 +84,87 @@ class Network:
             processed.add(cur_satellite_id)
 
         self.path = self.get_shortest_path()
-        #print("path: ", self.path)
-        if len(self.path) < 2:
+
+        self.timer = Timer(self.update_interval, self.update_topology)
+        self.timer.start()
+
+    def weight(self, node1, node2, attrs):
+        if node1 in self.dashes:
+            p1 = self.dashes[node1].pos
+            p2 = self.satellites[node2].pos
+        elif node2 in self.dashes:
+            p1 = self.dashes[node2].pos
+            p2 = self.satellites[node1].pos
+        else:
+            p1 = self.satellites[node1].pos
+            p2 = self.satellites[node2].pos
+        weight = (p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2 + (p2[2] - p1[2]) ** 2
+        return weight
+
+    def get_shortest_path(self):
+        try:
+            return shortest_path(self.graph, self.sender, self.recipient, self.weight)
+        except:
+            return []
+        
+    def check_path(self):
+        if len(self.path) < 3:
+            return
+        
+        dash_id = self.path[0]
+        satellite_id = self.path[1]
+        dash = self.dashes[dash_id]
+        satellite = self.satellites[satellite_id]
+        p1 = dash.pos
+        p2 = satellite.pos
+        e1 = [p1[0] - self.earth.model.getX(), p1[1] - self.earth.model.getY(), p1[2] - self.earth.model.getZ()]
+        e2 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]
+        cos2 = (e1[0] * e2[0] + e1[1] * e2[1] + e1[2] * e2[2]) / np.sqrt((e1[0]*e1[0] + e1[1]*e1[1] + e1[2]*e1[2]) * (e2[0]*e2[0] + e2[1]*e2[1] + e2[2]*e2[2]))
+        if cos2 <= self.dash_cone_cos2:
+            self.path = []
+            return
+        
+        dash_id = self.path[-1]
+        satellite_id = self.path[-2]
+        dash = self.dashes[dash_id]
+        satellite = self.satellites[satellite_id]
+        p1 = dash.pos
+        p2 = satellite.pos
+        e1 = [p1[0] - self.earth.model.getX(), p1[1] - self.earth.model.getY(), p1[2] - self.earth.model.getZ()]
+        e2 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]]
+        cos2 = (e1[0] * e2[0] + e1[1] * e2[1] + e1[2] * e2[2]) / np.sqrt((e1[0]*e1[0] + e1[1]*e1[1] + e1[2]*e1[2]) * (e2[0]*e2[0] + e2[1]*e2[1] + e2[2]*e2[2]))
+        if cos2 <= self.dash_cone_cos2:
+            self.path = []
+            return
+        
+        for i in range(1, len(self.path) - 2):
+            cur_satellite_id = self.path[i]
+            satellite_id = self.path[i+1]
+            cur_satellite = self.satellites[cur_satellite_id]
+            satellite = self.satellites[satellite_id]
+            p1 = cur_satellite.pos
+            p2 = satellite.pos
+            e3 = [(p2[0] - p1[0]), (p2[1] - p1[1]), (p2[2] - p1[2])]
+            e3_mod2 = e3[0] ** 2 + e3[1] ** 2 + e3[2] ** 2
+            e1 = [(p1[0] - self.earth.model.getX()), (p1[1] - self.earth.model.getY()), (p1[2] - self.earth.model.getZ())]   
+            e1_mod2 = e1[0] ** 2 + e1[1] ** 2 + e1[2] ** 2
+            
+            cos_beta_2 = (e1[0] * e3[0] + e1[1] * e3[1] + e1[2] * e3[2]) ** 2 / (e1_mod2 * e3_mod2)
+
+            cos_alpha_2 = self.earth.radius / e1_mod2
+
+            if cos_beta_2 >= cos_alpha_2:
+                self.path = []
+                return
+
+    def _update(self):
+        for line in self.lines:
+            line.remove_node()
+
+        self.lines = []
+        self.check_path()
+        
+        if len(self.path) < 3:
             return
 
         ls = LineSegs()
