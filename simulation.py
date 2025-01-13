@@ -11,6 +11,7 @@ from network import Network
 from satellite import Satellite, Calculator
 from satellite_dash import SatelliteDash
 from skybox import Skybox
+from menu import Menu
 
 p3d.load_prc_file_data(
     "",
@@ -47,6 +48,9 @@ class App(ShowBase):
 
         # Загрузка конфигурации
         self.load_config()
+
+        #Создание меню
+        self.parameter_menu = Menu(parent=self.aspect2d, n=3)
 
     def setup_earth(self):
         self.earth = Earth(self.loader)
