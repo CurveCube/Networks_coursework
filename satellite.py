@@ -5,22 +5,29 @@ from panda3d.core import CardMaker, LineSegs, LPoint3, NodePath, TransparencyAtt
 
 from node import Node
 
+
 class Calculator:
     def __init__(self, time_factor):
         self.t0 = time.time()
         self._time_factor = time_factor
-        self.a = np.array([], dtype=np.float64).reshape(0, 1)  # Большая полуось в тыс.км
+        self.a = np.array([], dtype=np.float64).reshape(
+            0, 1
+        )  # Большая полуось в тыс.км
         self.e = np.array([], dtype=np.float64).reshape(0, 1)  # Эксцентриситет
         self.i = np.array([], dtype=np.float64).reshape(0, 1)  # Наклонение орбиты
-        self.omega = np.array([], dtype=np.float64).reshape(0, 1)  # Долгота восходящего узла
+        self.omega = np.array([], dtype=np.float64).reshape(
+            0, 1
+        )  # Долгота восходящего узла
         self.w = np.array([], dtype=np.float64).reshape(0, 1)  # Аргумент перицентра
         self.m = np.array([], dtype=np.float64).reshape(0, 1)  # Средняя аномалия
-        self.mu = np.array([], dtype=np.float64).reshape(0, 1)  # Гравитационный параметр в км^3/с^2
+        self.mu = np.array([], dtype=np.float64).reshape(
+            0, 1
+        )  # Гравитационный параметр в км^3/с^2
 
     @property
     def time_factor(self):
         return self._time_factor
-    
+
     @time_factor.setter
     def time_factor(self, value):
         t = time.time()
@@ -37,7 +44,7 @@ class Calculator:
         self.m = np.vstack((self.m, satellite.m))
         self.mu = np.vstack((self.mu, satellite.mu))
         return self.a.shape[0] - 1
-    
+
     def mean_motion(self):
         return np.sqrt(self.mu / (self.a * 1000) ** 3)
 
@@ -162,7 +169,7 @@ class Satellite(Node):
 
     def radius(self, E):
         return self.a * (1 - self.e * np.cos(E))
-    
+
     def position(self):
         return self.calculator.get_satellite_position(self.index)
 
@@ -243,7 +250,7 @@ class Satellite(Node):
         self.sprite.reparent_to(parent)
 
         # Устанавливаем позицию спрайта относительно сцены
-        #x, y, z = self.position()
+        # x, y, z = self.position()
         x, y, z = 0.0, 0.0, 0.0
         self.sprite.set_pos(
             x + self.pos_shift[0], y + self.pos_shift[1], z + self.pos_shift[2]

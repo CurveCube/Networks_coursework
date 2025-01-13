@@ -1,21 +1,22 @@
+from json import load
+
 import numpy as np
 import panda3d.core as p3d
 import simplepbr
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import AmbientLight, DirectionalLight, LVector3
-from json import load
 
 from camera_controller import CameraController
 from earth import Earth
+from menu import Menu
 from network import Network
-from satellite import Satellite, Calculator
+from satellite import Calculator, Satellite
 from satellite_dash import SatelliteDash
 from skybox import Skybox
-from menu import Menu
 
 p3d.load_prc_file_data(
     "",
-    "window-size 1024 768\n"
+    "win-size 1600 900\n"
     "texture-minfilter mipmap\n"
     "texture-anisotropic-degree 16\n",
 )
@@ -49,8 +50,9 @@ class App(ShowBase):
         # Загрузка конфигурации
         self.load_config()
 
-        #Создание меню
-        self.parameter_menu = Menu(parent=self.aspect2d, n=3)
+        # Создание меню
+        self.parameter_menu = Menu(self.aspect2d, len(self.dashes), self.network.send)
+        self.network.set_progress_callback = self.parameter_menu.set_progress
 
     def setup_earth(self):
         self.earth = Earth(self.loader)
@@ -84,7 +86,13 @@ class App(ShowBase):
 
         # Настройка управления камерой
         self.camera_controller = CameraController(
-            self.camera, self.taskMgr, self.mouseWatcherNode, self.center, config["camera_rotation_angle"], config["camera_rotation_angle_vertical"], config["camera_radius"]
+            self.camera,
+            self.taskMgr,
+            self.mouseWatcherNode,
+            self.center,
+            config["camera_rotation_angle"],
+            config["camera_rotation_angle_vertical"],
+            config["camera_radius"],
         )
 
         # Отключение управления мышью по умолчанию
@@ -111,11 +119,11 @@ class App(ShowBase):
             self.earth,
             self.satellites,
             self.dashes,
-            config['sending_interval'],
-            config['loss_probability'],
-            config['window_size'],
-            config['timeout'],
-            config['update_topology_interval'],
+            config["sending_interval"],
+            config["loss_probability"],
+            config["window_size"],
+            config["timeout"],
+            config["update_topology_interval"],
             config["dash_cone_angle"],
             tuple(config["path_color"]),
             config["path_thickness"],
@@ -155,7 +163,7 @@ class App(ShowBase):
                 sprite_size=sprite_size,
                 num_orbit_segments=num_orbit_segments,
                 line_color=orbit_color,
-                line_thickness=orbit_thickness
+                line_thickness=orbit_thickness,
             )
             self.satellites.append(satellite)
         self.calculator.update_position()
@@ -172,7 +180,13 @@ class App(ShowBase):
         sprite_size = config["sprite_size"]
         for i, dash_info in enumerate(config["dashes"]):
             dash = SatelliteDash(
-                self.loader, self.central_node, f"d_{i}", self.earth, dash_info["lat"], dash_info["long"], sprite_size
+                self.loader,
+                self.central_node,
+                f"d_{i}",
+                self.earth,
+                dash_info["lat"],
+                dash_info["long"],
+                sprite_size,
             )
             self.dashes.append(dash)
             self.taskMgr.add(dash.update, f"update_dash_{i}")

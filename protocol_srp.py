@@ -1,8 +1,8 @@
 import enum
 import time
 
-
 from message import Message, MessageStatus
+
 
 class SRP_sender:
     class WndMsgStatus(enum.Enum):
@@ -17,10 +17,15 @@ class SRP_sender:
             self.number = number
             pass
 
-        def __str__(self):
-            return f"( {self.number}, {self.status}, {self.time})"
-            
-    def __init__ (self, answer_msg_queue, send_msg_queue, posted_msgs, window_size, max_number, timeout):
+    def __init__(
+        self,
+        answer_msg_queue,
+        send_msg_queue,
+        posted_msgs,
+        window_size,
+        max_number,
+        timeout,
+    ):
         self.answer_msg_queue = answer_msg_queue
         self.send_msg_queue = send_msg_queue
         self.posted_msgs = posted_msgs
@@ -32,11 +37,6 @@ class SRP_sender:
 
     def send(self):
         if self.ans_count < self.max_number:
-            res_str = "["
-            for i in range(self.window_size):
-                res_str += self.wnd_nodes[i].__str__()
-            res_str += "]"
-
             if self.answer_msg_queue.has_msg():
                 ans = self.answer_msg_queue.get_message()
                 self.ans_count += 1
@@ -45,7 +45,7 @@ class SRP_sender:
             # долго нет ответа с последнего подтверждения
             curr_time = time.time()
             for i in range(self.window_size):
-                if self.wnd_nodes[i].number > self.max_number:
+                if self.wnd_nodes[i].number >= self.max_number:
                     continue
 
                 send_time = self.wnd_nodes[i].time
@@ -55,7 +55,7 @@ class SRP_sender:
 
             # отправляем новые или повторяем, если необходимо
             for i in range(self.window_size):
-                if self.wnd_nodes[i].number > self.max_number:
+                if self.wnd_nodes[i].number >= self.max_number:
                     continue
 
                 if self.wnd_nodes[i].status == SRP_sender.WndMsgStatus.BUSY:
@@ -74,9 +74,11 @@ class SRP_sender:
                 elif self.wnd_nodes[i].status == SRP_sender.WndMsgStatus.CAN_BE_USED:
                     self.wnd_nodes[i].status = SRP_sender.WndMsgStatus.BUSY
                     self.wnd_nodes[i].time = time.time()
-                    self.wnd_nodes[i].number = self.wnd_nodes[i].number + self.window_size
+                    self.wnd_nodes[i].number = (
+                        self.wnd_nodes[i].number + self.window_size
+                    )
 
-                    if self.wnd_nodes[i].number > self.max_number:
+                    if self.wnd_nodes[i].number >= self.max_number:
                         continue
 
                     msg = Message()
@@ -90,13 +92,13 @@ class SRP_sender:
 
 
 class SRP_receiver:
-    def __init__ (self, answer_msg_queue, send_msg_queue, received_msgs):
+    def __init__(self, answer_msg_queue, send_msg_queue, received_msgs):
         self.answer_msg_queue = answer_msg_queue
         self.send_msg_queue = send_msg_queue
         self.received_msgs = received_msgs
 
     def receive(self):
-        if self.send_msg_queue.has_msg():
+        while self.send_msg_queue.has_msg():
             curr_msg = self.send_msg_queue.get_message()
 
             if curr_msg.status == MessageStatus.LOST:

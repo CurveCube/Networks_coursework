@@ -1,9 +1,12 @@
 import enum
+
 import numpy as np
+
 
 class MessageStatus(enum.Enum):
     OK = enum.auto()
     LOST = enum.auto()
+
 
 class Message:
     number = -1
@@ -21,9 +24,7 @@ class Message:
         msg.status = self.status
         return msg
 
-    def __str__(self):
-        return f"({self.real_number}({self.number}), {self.data}, {self.status})"
-    
+
 class MsgQueue:
     def __init__(self, loss_probability=0.3):
         self.msg_queue = []
@@ -52,12 +53,3 @@ class MsgQueue:
             msg.status = MessageStatus.LOST
 
         return msg
-
-    def __str__(self):
-        res_str = "[ "
-        for i in range(len(self.msg_queue)):
-            msg = self.msg_queue[i]
-            res_str += f"({msg.number}, {msg.status}), "
-
-        res_str += "]"
-        return res_str
