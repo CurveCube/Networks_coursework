@@ -1,0 +1,5 @@
+networkx==3.3
+numpy==2.0.1
+Panda3D==1.10.15
+panda3d-gltf==1.2.1
+panda3d-simplepbr==0.12.0
