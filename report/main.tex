@@ -1,0 +1,105 @@
+\documentclass[14pt,a4paper,article]{ncc}
+\usepackage[a4paper, mag=1000, left=2.5cm, right=1cm, top=2cm, bottom=2cm, headsep=0.7cm, footskip=1cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[english,russian]{babel}
+\usepackage{indentfirst}
+\usepackage{amsfonts} 
+\usepackage{amssymb} 
+\usepackage{amsmath, etoolbox}
+\usepackage{graphicx}
+\usepackage{float}
+\graphicspath{{../figure/}}
+\DeclareGraphicsExtensions{.png,.jpg, .jpeg}
+
+%\bibliographystyle{gost-numeric.bbx}
+\usepackage{csquotes}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{literature.bib}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhead[LE,RO]{\thepage}
+\fancyfoot{} 
+
+\usepackage{listings}
+
+%\patchcmd\subequations
+%{\theparentequation\alph{equation}}
+%{\subequationsformat}
+%{}{}
+
+%\newcommand{\subequationsformat}{\theparentequation.\arabic{equation}}
+
+%\numberwithin{equation}{subsection}
+
+
+\usepackage[colorlinks]{hyperref}
+\hypersetup{linkcolor=black}
+
+\begin{document}
+
+% Title page 
+\begin{titlepage}
+    \begin{center}
+        \textsc{
+            Санкт-Петербургский политехнический университет Петра Великого \\[5mm]
+            Физико-механический институт\\[2mm]
+            Высшая школа прикладной математики и вычислительной физики
+        }   
+        \vfill
+        \textbf{\large
+            Компьютерные сети\\
+            Отчёт по лабораторной работе №3 \\
+            ``Симуляция сети с использованием протоколов SRP и OSPF'' \\[3mm]
+            %по курсовой работе \\[3mm]
+        }                
+    \end{center}
+
+    \vfill
+    \hfill
+    \begin{minipage}{0.5\textwidth}
+        Выполнили: \\[2mm]   
+		Студенты: Баев Даниил и Чевыкалов Григорий \\
+		Группа: 5040102/30201\\
+    \end{minipage}
+
+	\hfill
+	\begin{minipage}{0.5\textwidth}
+		Принял: \\[2mm]
+		к. ф.-м. н., доцент \\   
+		Баженов Александр Николаевич
+	\end{minipage}
+
+    \vfill
+    \begin{center}
+        \theyear\ г.
+    \end{center}
+\end{titlepage}
+
+\tableofcontents
+\listoffigures
+%\listoftables
+\newpage
+
+\section{Постановка задачи}
+\input{problem.tex}
+
+\section{Теория}
+\input{theory.tex}
+
+\section{Реализация}
+\input{impl.tex}
+
+\section{Результаты}
+\input{results.tex}
+
+\section{Обсуждение}
+\input{discuss.tex}
+
+\printbibliography
+%\addcontentsline{toc}{section}{Литература}
+
+\input{app.tex}
+
+\end{document}
